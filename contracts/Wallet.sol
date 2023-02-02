@@ -29,6 +29,7 @@ contract Wallet {
 
   struct Transfer {
     uint256 transferNum;
+
     address receiver;
     uint256 amount;
 
@@ -38,7 +39,7 @@ contract Wallet {
   }
 
   uint numTransfers;
-  mapping (uint => Transfer) transfers;
+  mapping (uint => Transfer) Transfers;
 
 
   function addLayerToMakeTransfer(
@@ -68,7 +69,7 @@ contract Wallet {
     numLayersToMakeTransfer++;
   }
 
-  function updateLayerToMakeATransfer() private {
+  function updateLayerToMakeTransfer() private {
     //
   }
 
@@ -77,14 +78,52 @@ contract Wallet {
   }
 
 
-  // Add layers to TransferLayers
-  // Add Transfer to Transfers
-  // If any of them fails... then both of them fail
   function makeTransfer(
     address _receiver,
     uint256 _amount
   ) private {
-    //
+    // How to check if any fails. Then make them both fail.
+    addTransferLayers();
+    addTransfer(_receiver, _amount);
+  }
+
+  function addTransferLayers() private {
+    for (uint layerNum = 0; layerNum < numLayersToMakeTransfer; layerNum++) {
+      Layer storage _layer = LayersToMakeTransfer[layerNum];
+
+      Layer storage layer = TransferLayers[numTransfers][layerNum];
+
+      AmountMinMax amount = AmountMinMax({
+        min: _layer.amount.min,
+        max: _layer.amount.max
+      });
+
+      layer.amount = amount;
+
+      layer.numTokens = _layer.numTokens;
+
+      for (uint tokenNum = 0; tokenNum < _layer.numTokens; tokenNum++) {
+        string token = _layer.tokens[tokenNum];
+
+        layer.tokens[tokenNum] = token;
+      }
+    }
+  }
+
+  function addTransfer(
+    address _receiver,
+    uint256 _amount
+  ) private {
+    Transfer storage transfer = Transfers[numTransfers];
+
+    transfer.transferNum = numTransfers;
+
+    transfer.receiver = _receiver;
+    transfer.amount = _amount;
+
+    transfer.transferLayersIndex = numTransfers;
+
+    transfer.executed = false;
   }
 
 
@@ -101,8 +140,15 @@ contract Wallet {
 
   function testSetLayersToMakeTransfer() private {
     addLayerToMakeTransfer(0, 100);
+    addLayerToMakeTransfer(100, 120);
+    addLayerToMakeTransfer(120, 140);
+    addLayerToMakeTransfer(140, 1000);
 
     emit TestLogNumLayersToMakeTransfer(numLayersToMakeTransfer);
+  }
+
+  function testMakeTransfer() private {
+    //
   }
 
   function testLogLayersToMakeTransfer() private {
